@@ -1,0 +1,39 @@
+name: ip-management-backend
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: ip-management-app:local
+    container_name: ip-management-app
+    restart: unless-stopped
+    env_file:
+      - ./.envs/app.env
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    volumes:
+      - ../:/var/www/html
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+#   db:
+#     image: mysql:8.0
+#     container_name: ip-management-db
+#     restart: unless-stopped
+#     env_file:
+#       - ./.envs/app.env
+#     command: --default-authentication-plugin=mysql_native_password
+#     healthcheck:
+#       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 10
+#       start_period: 20s
+#     ports:
+#       - "${MYSQL_PORT:-3306}:3306"
+#     volumes:
+#       - ip-management-db-data:/var/lib/mysql
+
+# volumes:
+#   ip-management-db-data:

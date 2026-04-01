@@ -1,0 +1,17 @@
+services:
+  app:
+    networks:
+      common-net:
+        aliases:
+          - ip-management-app
+
+  # db:
+  #   networks:
+  #     common-net:
+  #       aliases:
+  #         - ip-management-db
+  #         - db
+
+networks:
+  common-net:
+    external: true

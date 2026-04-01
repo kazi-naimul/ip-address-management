@@ -1,0 +1,17 @@
+services:
+  app:
+    networks:
+      ip-management-net:
+        aliases:
+          - ip-management-app
+
+  db:
+    networks:
+      ip-management-net:
+        aliases:
+          - ip-management-db
+          - db
+
+networks:
+  ip-management-net:
+    driver: bridge

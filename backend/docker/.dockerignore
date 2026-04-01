@@ -1,0 +1,10 @@
+.git
+.gitignore
+
+api_log.txt
+cron_log.txt
+
+uploads/*
+!uploads/.gitkeep
+
+*.bak
