@@ -10,12 +10,27 @@ services:
     restart: unless-stopped
     env_file:
       - ./.envs/app.env
-    ports:
-      - "${WEB_PORT:-8081}:80"
     volumes:
       - ../:/var/www/html
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - app-network
+      - common-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: ip-management-nginx
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8081}:80"
+    volumes:
+      - ../:/var/www/html
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - app-network
 
 #   db:
 #     image: mysql:8.0
@@ -37,3 +52,9 @@ services:
 
 # volumes:
 #   ip-management-db-data:
+
+networks:
+  app-network:
+    driver: bridge
+  common-net:
+    external: true
