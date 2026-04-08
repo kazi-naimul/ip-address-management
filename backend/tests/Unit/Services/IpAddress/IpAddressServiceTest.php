@@ -9,10 +9,15 @@ use App\Services\IpAddress\IpAddressService;
 use PHPUnit\Framework\TestCase;
 use Mockery;
 
+/**
+ * @runTestsInSeparateProcesses
+ * @preserveGlobalState disabled
+ */
 class IpAddressServiceTest extends TestCase
 {
     private IpAddressService $ipAddressService;
     private IpAddressRepository $ipAddressRepository;
+    private static bool $auditLogAliasInitialized = false;
 
     protected function setUp(): void
     {
@@ -26,6 +31,16 @@ class IpAddressServiceTest extends TestCase
     {
         Mockery::close();
         parent::tearDown();
+    }
+
+    private function getAuditLogMock(): \Mockery\MockInterface
+    {
+        if (!self::$auditLogAliasInitialized) {
+            self::$auditLogAliasInitialized = true;
+            return Mockery::mock('alias:App\Services\AuditLog\AuditLogService');
+        }
+
+        return Mockery::mock('App\Services\AuditLog\AuditLogService');
     }
 
     public function test_get_all_returns_ip_addresses()
@@ -53,7 +68,7 @@ class IpAddressServiceTest extends TestCase
     public function test_create_ip_address_successfully()
     {
         // Arrange
-        $user = $this->createMock(User::class);
+        $user = new User();
         $user->id = 1;
 
         $data = [
@@ -72,7 +87,7 @@ class IpAddressServiceTest extends TestCase
             ->willReturn($ipAddress);
 
         // Mock AuditLogService::record static call
-        Mockery::mock('alias:App\Services\AuditLog\AuditLogService')
+        $this->getAuditLogMock()
             ->shouldReceive('record')
             ->once()
             ->with($user, 'ip_created', IpAddress::class, $ipAddress->id, $ipAddress->toArray());
@@ -90,7 +105,7 @@ class IpAddressServiceTest extends TestCase
     public function test_update_ip_address_successfully()
     {
         // Arrange
-        $user = $this->createMock(User::class);
+        $user = new User();
         $user->id = 1;
 
         $ipAddress = new IpAddress([
@@ -108,7 +123,7 @@ class IpAddressServiceTest extends TestCase
             ->willReturn(true);
 
         // Mock AuditLogService::record static call
-        Mockery::mock('alias:App\Services\AuditLog\AuditLogService')
+        $this->getAuditLogMock()
             ->shouldReceive('record')
             ->once()
             ->with($user, 'ip_updated', IpAddress::class, $ipAddress->id, ['before' => $ipAddress->toArray(), 'after' => $ipAddress->toArray()]);
@@ -204,7 +219,7 @@ class IpAddressServiceTest extends TestCase
     public function test_update_by_id_successful()
     {
         // Arrange
-        $user = $this->createMock(User::class);
+        $user = new User();
         $user->id = 1;
 
         $ipAddress = new IpAddress([
@@ -228,7 +243,7 @@ class IpAddressServiceTest extends TestCase
             ->willReturn(true);
 
         // Mock AuditLogService::record static call
-        Mockery::mock('alias:App\Services\AuditLog\AuditLogService')
+        $this->getAuditLogMock()
             ->shouldReceive('record')
             ->once()
             ->with($user, 'ip_updated', IpAddress::class, $ipAddress->id, ['before' => $ipAddress->toArray(), 'after' => $ipAddress->toArray()]);
@@ -245,7 +260,7 @@ class IpAddressServiceTest extends TestCase
     public function test_update_by_id_not_found()
     {
         // Arrange
-        $user = $this->createMock(User::class);
+        $user = new User();
         $user->id = 1;
 
         $data = ['label' => 'New Label'];
