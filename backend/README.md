@@ -1,156 +1,349 @@
-# IP Address Management Solution
+# IP Address Management — Backend
 
-A Laravel-based API for managing IP addresses with audit logging, running on Nginx + PHP-FPM.
+A REST API for managing IP addresses with full audit logging and token-based authentication via Laravel Sanctum.
+
+---
+
+## Tech Stack
+
+- **PHP** 8.2
+- **Laravel** 10
+- **MySQL** 8.0
+- **Laravel Sanctum** (API token authentication)
+- **Nginx** (reverse proxy via Docker)
+- **PHPUnit** 10 + Mockery (unit tests)
+
+---
+
+## Project Structure
+
+```
+backend/
+├── app/
+│   ├── Http/Controllers/Api/   # AuthController, IpAddressController, AuditLogController
+│   ├── Models/                 # User, IpAddress, AuditLog
+│   ├── Repositories/           # Data access layer
+│   ├── Services/               # Business logic (Auth, IpAddress, AuditLog)
+│   └── Library/Response/       # ResponseBuilder utility
+├── database/
+│   ├── migrations/             # Database migrations
+│   └── seeders/                # UserSeeder (creates default user)
+├── docker/
+│   ├── docker-compose.yml      # Main Compose file
+│   ├── docker-compose.override.yml
+│   ├── Dockerfile              # PHP-FPM image
+│   ├── nginx.conf              # Nginx site config
+│   ├── entrypoint.sh           # Container startup script
+│   └── .envs/
+│       ├── app.env             # Active environment (git-ignored)
+│       └── app.env.example     # Template to copy from
+├── tests/Unit/                 # Unit tests for all services
+├── Makefile                    # Convenience commands
+└── routes/api.php              # All API routes
+```
+
+---
 
 ## Prerequisites
 
-- Docker and Docker Compose
-- PHP 8.1+
-- MySQL 8.0+
-- Composer
+- [Docker](https://docs.docker.com/get-docker/) and Docker Compose v2
 
-## Quick Setup (Recommended)
+---
 
-Run the automated setup script:
+## Getting Started
 
-```bash
-./setup.sh
-```
-
-This will:
-- Copy `.env.example` to `.env`
-- Build Docker containers
-- Install PHP dependencies
-- Generate application key
-- Run database migrations
-
-## Manual Setup
-
-### 1. Environment Configuration
-
-Copy the example environment file:
+### 1. Enter the backend directory
 
 ```bash
-cp .env.example .env
+cd backend/
 ```
 
-Edit `.env` to match your database configuration. The app is configured to work with an external MySQL database on the `common-net` network.
-
-If you need to customize the Docker setup (ports, networks, etc.), copy the override example:
+### 2. Set up the environment file
 
 ```bash
-cd docker
-cp docker-compose.override.example.yml docker-compose.override.yml
+cp docker/.envs/app.env.example docker/.envs/app.env
 ```
 
-Edit the override file as needed for your local environment.
+Edit `docker/.envs/app.env` and set your values:
 
-### 2. Install Dependencies
+```env
+APP_KEY=                    # leave blank — generate in step 4
+DB_HOST=db                  # matches the db service name in docker-compose.yml
+DB_DATABASE=ip_management_db
+DB_USERNAME=root
+DB_PASSWORD=secret
+WEB_PORT=8081               # host port for the API
+```
+
+### 3. Build images and install dependencies
 
 ```bash
-# Navigate to docker directory
-cd docker
-
-# Build and start the containers
-docker compose build --no-cache
-docker compose up -d
-
-# Install PHP dependencies
-docker compose run --rm --user root app sh -c "composer install"
+make setup
 ```
 
-### 3. Database Setup
+This single command copies the env file, builds the Docker image, and installs Composer dependencies.
 
-The application expects a MySQL database named `ip_management_db` accessible at `common-mysql:3306`.
-
-If you need to run migrations manually (in case of Artisan issues):
+Or do it step by step:
 
 ```bash
-# Run migrations using the provided script
-docker compose run --rm app php /var/www/html/run-migrations.php
+cd docker && docker compose build --no-cache
+cd docker && docker compose run --rm --user root app sh -c "composer install"
 ```
 
-Or if Artisan works in your environment:
+### 4. Start the containers
 
 ```bash
-docker compose run --rm app php artisan migrate
+make up
+
+# Or manually
+cd docker && docker compose up -d
 ```
 
-### 4. Generate Application Key
+### 5. Generate the application key
 
 ```bash
-docker compose run --rm app php artisan key:generate
+make key-generate
+
+# Or manually
+cd docker && docker compose run --rm app php artisan key:generate
 ```
 
-### 5. Verify Installation
+### 6. Run database migrations
 
-Check that the application is running:
+```bash
+# Via the custom migration script (recommended — skips already-existing tables)
+make migrate
+
+# Or via Artisan
+make migrate-artisan
+```
+
+### 7. Seed the database
+
+```bash
+make seed
+
+# Or manually
+cd docker && docker compose run --rm app php artisan db:seed
+```
+
+This creates the default user:
+
+| Field    | Value              |
+|----------|--------------------|
+| Email    | `test@example.com` |
+| Password | `password123`      |
+
+### 8. Verify the installation
 
 ```bash
 curl http://localhost:8081/api/health
 ```
 
-You should receive a JSON response indicating the API is healthy.
+Expected response:
 
-## Makefile Commands
-
-Use the provided Makefile for common tasks:
-
-```bash
-make setup    # Initial setup
-make up       # Start containers
-make migrate  # Run migrations
-make test     # Run tests
-make clean    # Clean up
+```json
+{ "status": true, "code": 200, "message": "OK" }
 ```
 
-Run `make help` to see all available commands.
+---
 
-## API Endpoints
+## Docker Commands
 
-- `GET /api/health` - Health check endpoint
-- `GET /api/user` - Get authenticated user (requires Sanctum token)
+### Using Make
 
-## Database Schema
+| Command               | Description                                       |
+|-----------------------|---------------------------------------------------|
+| `make setup`          | First-time setup: build image + install deps      |
+| `make up`             | Start all containers in the background            |
+| `make down`           | Stop all containers                               |
+| `make restart`        | Restart all containers                            |
+| `make build`          | Rebuild Docker images                             |
+| `make shell`          | Open a bash shell in the app container            |
+| `make logs`           | Tail app container logs                           |
+| `make migrate`        | Run migrations via the custom PHP script          |
+| `make migrate-artisan`| Run migrations via Artisan                        |
+| `make seed`           | Run database seeders                              |
+| `make key-generate`   | Generate the Laravel APP_KEY                      |
+| `make install`        | Install Composer dependencies                     |
+| `make update`         | Update Composer dependencies                      |
+| `make test`           | Run the full test suite inside Docker             |
+| `make clean`          | Stop containers, remove volumes, prune images     |
 
-The application includes three main tables:
+Run `make help` to see all commands at any time.
 
-- `users` - User accounts
-- `ip_addresses` - IP address records with labels
-- `audit_logs` - Audit trail for all changes
+### Raw Docker Compose commands
+
+All Compose commands must be run from the `docker/` directory:
+
+```bash
+# Build images
+cd docker && docker compose build
+
+# Build without cache
+cd docker && docker compose build --no-cache
+
+# Start containers (detached)
+cd docker && docker compose up -d
+
+# Stop containers
+cd docker && docker compose down
+
+# Stop and remove volumes
+cd docker && docker compose down -v
+
+# Open a shell in the running app container
+cd docker && docker compose exec app bash
+
+# Run a one-off Artisan command in a fresh container
+cd docker && docker compose run --rm app php artisan <command>
+
+# View logs (follow)
+cd docker && docker compose logs -f app
+
+# View all container statuses
+cd docker && docker compose ps
+```
+
+---
+
+## Running Tests
+
+```bash
+# Using Make (runs inside Docker)
+make test
+
+# Run unit tests only
+cd docker && docker compose run --rm app ./vendor/bin/phpunit --testsuite Unit
+
+# Run with verbose output
+cd docker && docker compose run --rm app ./vendor/bin/phpunit --testsuite Unit --verbose
+
+# Run a specific test class
+cd docker && docker compose run --rm app ./vendor/bin/phpunit tests/Unit/Services/Auth/LoginServiceTest.php
+cd docker && docker compose run --rm app ./vendor/bin/phpunit tests/Unit/Services/IpAddress/IpAddressServiceTest.php
+cd docker && docker compose run --rm app ./vendor/bin/phpunit tests/Unit/Services/AuditLog/AuditLogQueryServiceTest.php
+
+# Run with code coverage (requires Xdebug or PCOV)
+cd docker && docker compose run --rm app ./vendor/bin/phpunit --coverage-text
+```
+
+---
+
+## API Reference
+
+Base URL: `http://localhost:8081/api`
+
+### Authentication
+
+| Method | Endpoint  | Auth required | Description      |
+|--------|-----------|---------------|------------------|
+| GET    | `/health` | No            | Health check     |
+| POST   | `/login`  | No            | Obtain API token |
+
+**POST `/login`**
+
+Request:
+```json
+{
+  "email": "test@example.com",
+  "password": "password123"
+}
+```
+
+Response:
+```json
+{
+  "status": true,
+  "code": 200,
+  "message": "Login successful",
+  "data": { "token": "<bearer-token>" }
+}
+```
+
+All protected endpoints require:
+```
+Authorization: Bearer <token>
+```
+
+---
+
+### IP Addresses
+
+| Method | Endpoint             | Description             |
+|--------|----------------------|-------------------------|
+| GET    | `/ip-addresses`      | List all IP addresses   |
+| POST   | `/ip-addresses`      | Create a new IP address |
+| GET    | `/ip-addresses/{id}` | Get a single IP address |
+| PUT    | `/ip-addresses/{id}` | Update the label        |
+
+**POST/PUT body:**
+```json
+{
+  "ip_address": "192.168.1.1",
+  "label": "Office Router"
+}
+```
+
+---
+
+### Audit Logs
+
+| Method | Endpoint                      | Description                    |
+|--------|-------------------------------|--------------------------------|
+| GET    | `/audit-logs`                 | All audit entries (paginated)  |
+| GET    | `/audit-logs/login`           | All login events               |
+| GET    | `/audit-logs/my-logins`       | Current user's login history   |
+| GET    | `/audit-logs/ip-address/{id}` | Change history for one IP      |
+
+---
+
+## Containers
+
+| Container             | Role                | Internal port | Host port       |
+|-----------------------|---------------------|---------------|-----------------|
+| `ip-management-app`   | PHP-FPM (Laravel)   | 9000          | —               |
+| `ip-management-nginx` | Nginx reverse proxy | 80            | `8081`          |
+| `ip-management-db`    | MySQL 8.0           | 3306          | `3306` (default)|
+
+---
+
+## Environment Variables (`docker/.envs/app.env`)
+
+| Variable      | Description                              | Default              |
+|---------------|------------------------------------------|----------------------|
+| `APP_KEY`     | Laravel encryption key                   | *(generate via artisan)* |
+| `APP_ENV`     | Environment (`local`, `production`)      | `local`              |
+| `APP_DEBUG`   | Enable debug mode                        | `true`               |
+| `APP_URL`     | Public URL of the app                    | `http://localhost:8081` |
+| `DB_HOST`     | MySQL hostname                           | `db`                 |
+| `DB_PORT`     | MySQL port                               | `3306`               |
+| `DB_DATABASE` | Database name                            | `ip_management_db`   |
+| `DB_USERNAME` | Database user                            | `root`               |
+| `DB_PASSWORD` | Database password                        | `secret`             |
+| `WEB_PORT`    | Host port exposed by Nginx               | `8081`               |
+
+---
 
 ## Troubleshooting
 
-### Artisan Commands Hanging
+**Artisan commands hang or time out**
 
-If `php artisan` commands hang or timeout, use the provided `run-migrations.php` script instead:
-
+Use the raw migration script instead:
 ```bash
-docker compose run --rm app php /var/www/html/run-migrations.php
+make migrate
+# or: cd docker && docker compose run --rm app php /var/www/html/run-migrations.php
 ```
 
-### Database Connection Issues
+**Permission errors in the container**
 
-Ensure your database is accessible on the `common-net` network and the credentials in `.env` are correct.
-
-### Permission Issues
-
-If you encounter permission errors, run commands with `--user root`:
-
+Run Composer commands as root:
 ```bash
-docker compose run --rm --user root app sh -c "composer install"
+cd docker && docker compose run --rm --user root app sh -c "composer install"
 ```
 
-## Development
-
-### Running Tests
+**Storage / cache permission errors**
 
 ```bash
-docker compose run --rm app php artisan test
-```
-
-### Code Style
-
-```bash
-docker compose run --rm app ./vendor/bin/pint
+cd docker && docker compose exec app bash -c "chown -R www-data:www-data storage bootstrap/cache && chmod -R 775 storage bootstrap/cache"
 ```
