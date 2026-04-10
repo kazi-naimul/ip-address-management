@@ -18,7 +18,7 @@ class IpAddressRepository extends BaseRepository
 
     public function create(array $data): IpAddress
     {
-        return parent::create($data);
+        return $this->model->create($data);
     }
 
     public function update(IpAddress $ipAddress, array $data): bool

@@ -1,5 +1,5 @@
-import { NavLink, useNavigate } from "react-router-dom";
-import { useAuth } from "@/lib/auth-context";
+import { NavLink } from "react-router-dom";
+import useAuth from "@/hooks/useAuth";
 import { Network, List, ClipboardList, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -10,12 +10,6 @@ const navItems = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { userEmail, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
 
   return (
     <div className="flex min-h-screen">
@@ -26,7 +20,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <List className="h-6 w-6 text-primary" />
             <span className="font-bold text-lg tracking-tight">IPAM</span>
           </div>
-          <p className="text-xs text-nav-foreground/60 mt-1">IP Address Manager</p>
+          <p className="text-xs text-nav-foreground/60 mt-1">
+            IP Address Manager
+          </p>
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {navItems.map(({ to, label, icon: Icon }) => (
@@ -48,9 +44,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="p-3 border-t border-nav-foreground/10">
-          <p className="text-xs text-nav-foreground/50 px-3 mb-2 truncate">{userEmail}</p>
+          <p className="text-xs text-nav-foreground/50 px-3 mb-2 truncate">
+            {userEmail}
+          </p>
           <button
-            onClick={handleLogout}
+            onClick={logout}
             className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-nav-foreground/70 hover:bg-nav-foreground/5 hover:text-nav-foreground transition-colors w-full"
           >
             <LogOut className="h-4 w-4" />

@@ -28,6 +28,7 @@ readonly class IpAddressService
 
     public function create(array $data, User $user): array
     {
+        $data['created_by'] = $user->id;
         $ipAddress = $this->ipAddressRepository->create($data);
 
         AuditLogService::record(

@@ -1,30 +1,34 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/lib/auth-context";
+import useAuth from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Network } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const { login } = useAuth();
-  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { login, loading } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
     if (!email) { setError("Email is required"); return; }
     if (!password) { setError("Password is required"); return; }
-    const success = login(email, password);
-    if (success) {
-      navigate("/dashboard");
-    } else {
-      setError("Invalid credentials. Use any email with password \"password\".");
-    }
+
+    await login(email, password, (message) => {
+      setError(message);
+    });
   };
 
   return (
@@ -47,6 +51,7 @@ export default function Login() {
                 placeholder="admin@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -57,13 +62,13 @@ export default function Login() {
                 placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full">Sign in</Button>
-            <p className="text-xs text-center text-muted-foreground">
-              Demo: use any email with password <code className="bg-muted px-1 rounded">"password"</code>
-            </p>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Signing in..." : "Sign in"}
+            </Button>
           </form>
         </CardContent>
       </Card>
