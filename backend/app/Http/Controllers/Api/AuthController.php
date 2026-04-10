@@ -19,7 +19,7 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $response = $this->loginService->login($credentials);
+        $response = $this->loginService->login($credentials, $request->ip(), $request->userAgent() ?? '');
 
         return response()->json($response, $response['code']);
     }

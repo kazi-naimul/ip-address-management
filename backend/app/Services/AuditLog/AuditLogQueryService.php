@@ -3,14 +3,15 @@
 namespace App\Services\AuditLog;
 
 use App\Library\Response\ResponseBuilder;
-use App\Models\IpAddress;
 use App\Repositories\AuditLogRepository;
-use Illuminate\Contracts\Pagination\Paginator;
+use App\Repositories\IpAddressRepository;
 
 readonly class AuditLogQueryService
 {
-    public function __construct(private AuditLogRepository $auditLogRepository)
-    {
+    public function __construct(
+        private AuditLogRepository $auditLogRepository,
+        private IpAddressRepository $ipAddressRepository,
+    ) {
     }
 
     public function getAllAuditLogs($limit = 50): array
@@ -51,7 +52,7 @@ readonly class AuditLogQueryService
 
     public function getIpAddressChangeHistory(int $id): array
     {
-        $ipAddress = IpAddress::find($id);
+        $ipAddress = $this->ipAddressRepository->findById($id);
 
         if (!$ipAddress) {
             return ResponseBuilder::getInstance()
@@ -61,7 +62,7 @@ readonly class AuditLogQueryService
                 ->build();
         }
 
-        $history = $this->auditLogRepository->getAuditLogsByModelId(IpAddress::class, $id);
+        $history = $this->auditLogRepository->getAuditLogsByModelId(get_class($ipAddress), $id);
 
         return ResponseBuilder::getInstance()
             ->status(true)

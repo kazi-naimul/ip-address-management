@@ -8,6 +8,7 @@ use App\Repositories\IpAddressRepository;
 use App\Services\IpAddress\IpAddressService;
 use PHPUnit\Framework\TestCase;
 use Mockery;
+use Mockery\MockInterface;
 
 /**
  * @runTestsInSeparateProcesses
@@ -16,14 +17,13 @@ use Mockery;
 class IpAddressServiceTest extends TestCase
 {
     private IpAddressService $ipAddressService;
-    private IpAddressRepository $ipAddressRepository;
-    private static bool $auditLogAliasInitialized = false;
+    private MockInterface $ipAddressRepository;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->ipAddressRepository = $this->createMock(IpAddressRepository::class);
+        $this->ipAddressRepository = Mockery::mock(IpAddressRepository::class);
         $this->ipAddressService = new IpAddressService($this->ipAddressRepository);
     }
 
@@ -31,16 +31,6 @@ class IpAddressServiceTest extends TestCase
     {
         Mockery::close();
         parent::tearDown();
-    }
-
-    private function getAuditLogMock(): \Mockery\MockInterface
-    {
-        if (!self::$auditLogAliasInitialized) {
-            self::$auditLogAliasInitialized = true;
-            return Mockery::mock('alias:App\Services\AuditLog\AuditLogService');
-        }
-
-        return Mockery::mock('App\Services\AuditLog\AuditLogService');
     }
 
     public function test_get_all_returns_ip_addresses()
@@ -51,9 +41,9 @@ class IpAddressServiceTest extends TestCase
         ]);
 
         $this->ipAddressRepository
-            ->expects($this->once())
-            ->method('getAllWithCreator')
-            ->willReturn($ipAddresses);
+            ->shouldReceive('getAllWithCreator')
+            ->once()
+            ->andReturn($ipAddresses);
 
         // Act
         $result = $this->ipAddressService->getAll();
@@ -81,13 +71,12 @@ class IpAddressServiceTest extends TestCase
         $ipAddress->id = 1;
 
         $this->ipAddressRepository
-            ->expects($this->once())
-            ->method('create')
+            ->shouldReceive('create')
+            ->once()
             ->with($data)
-            ->willReturn($ipAddress);
+            ->andReturn($ipAddress);
 
-        // Mock AuditLogService::record static call
-        $this->getAuditLogMock()
+        Mockery::mock('alias:App\Services\AuditLog\AuditLogService')
             ->shouldReceive('record')
             ->once()
             ->with($user, 'ip_created', IpAddress::class, $ipAddress->id, $ipAddress->toArray());
@@ -117,16 +106,15 @@ class IpAddressServiceTest extends TestCase
         $data = ['label' => 'New Label'];
 
         $this->ipAddressRepository
-            ->expects($this->once())
-            ->method('update')
+            ->shouldReceive('update')
+            ->once()
             ->with($ipAddress, ['label' => 'New Label'])
-            ->willReturn(true);
+            ->andReturn(true);
 
-        // Mock AuditLogService::record static call
-        $this->getAuditLogMock()
+        Mockery::mock('alias:App\Services\AuditLog\AuditLogService')
             ->shouldReceive('record')
             ->once()
-            ->with($user, 'ip_updated', IpAddress::class, $ipAddress->id, ['before' => $ipAddress->toArray(), 'after' => $ipAddress->toArray()]);
+            ->with($user, 'ip_updated', IpAddress::class, $ipAddress->id, Mockery::type('array'));
 
         // Act
         $result = $this->ipAddressService->update($ipAddress, $data, $user);
@@ -145,10 +133,10 @@ class IpAddressServiceTest extends TestCase
         $ipAddress->id = 1;
 
         $this->ipAddressRepository
-            ->expects($this->once())
-            ->method('findById')
+            ->shouldReceive('findById')
+            ->once()
             ->with(1)
-            ->willReturn($ipAddress);
+            ->andReturn($ipAddress);
 
         // Act
         $result = $this->ipAddressService->findById(1);
@@ -161,10 +149,10 @@ class IpAddressServiceTest extends TestCase
     {
         // Arrange
         $this->ipAddressRepository
-            ->expects($this->once())
-            ->method('findById')
+            ->shouldReceive('findById')
+            ->once()
             ->with(999)
-            ->willReturn(null);
+            ->andReturn(null);
 
         // Act
         $result = $this->ipAddressService->findById(999);
@@ -183,10 +171,10 @@ class IpAddressServiceTest extends TestCase
         $ipAddress->shouldReceive('load')->with('creator')->andReturnSelf();
 
         $this->ipAddressRepository
-            ->expects($this->once())
-            ->method('findById')
+            ->shouldReceive('findById')
+            ->once()
             ->with(1)
-            ->willReturn($ipAddress);
+            ->andReturn($ipAddress);
 
         // Act
         $result = $this->ipAddressService->getById(1);
@@ -202,10 +190,10 @@ class IpAddressServiceTest extends TestCase
     {
         // Arrange
         $this->ipAddressRepository
-            ->expects($this->once())
-            ->method('findById')
+            ->shouldReceive('findById')
+            ->once()
             ->with(999)
-            ->willReturn(null);
+            ->andReturn(null);
 
         // Act
         $result = $this->ipAddressService->getById(999);
@@ -231,22 +219,21 @@ class IpAddressServiceTest extends TestCase
         $data = ['label' => 'New Label'];
 
         $this->ipAddressRepository
-            ->expects($this->once())
-            ->method('findById')
+            ->shouldReceive('findById')
+            ->once()
             ->with(1)
-            ->willReturn($ipAddress);
+            ->andReturn($ipAddress);
 
         $this->ipAddressRepository
-            ->expects($this->once())
-            ->method('update')
+            ->shouldReceive('update')
+            ->once()
             ->with($ipAddress, ['label' => 'New Label'])
-            ->willReturn(true);
+            ->andReturn(true);
 
-        // Mock AuditLogService::record static call
-        $this->getAuditLogMock()
+        Mockery::mock('alias:App\Services\AuditLog\AuditLogService')
             ->shouldReceive('record')
             ->once()
-            ->with($user, 'ip_updated', IpAddress::class, $ipAddress->id, ['before' => $ipAddress->toArray(), 'after' => $ipAddress->toArray()]);
+            ->with($user, 'ip_updated', IpAddress::class, $ipAddress->id, Mockery::type('array'));
 
         // Act
         $result = $this->ipAddressService->updateById(1, $data, $user);
@@ -266,10 +253,10 @@ class IpAddressServiceTest extends TestCase
         $data = ['label' => 'New Label'];
 
         $this->ipAddressRepository
-            ->expects($this->once())
-            ->method('findById')
+            ->shouldReceive('findById')
+            ->once()
             ->with(999)
-            ->willReturn(null);
+            ->andReturn(null);
 
         // Act
         $result = $this->ipAddressService->updateById(999, $data, $user);

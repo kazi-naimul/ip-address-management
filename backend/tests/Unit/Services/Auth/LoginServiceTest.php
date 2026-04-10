@@ -5,21 +5,24 @@ namespace Tests\Unit\Services\Auth;
 use App\Models\User;
 use App\Repositories\UserRepository;
 use App\Services\Auth\LoginService;
-use App\Services\AuditLog\AuditLogService;
-use Illuminate\Support\Facades\Hash;
 use PHPUnit\Framework\TestCase;
 use Mockery;
+use Mockery\MockInterface;
 
+/**
+ * @runTestsInSeparateProcesses
+ * @preserveGlobalState disabled
+ */
 class LoginServiceTest extends TestCase
 {
     private LoginService $loginService;
-    private UserRepository $userRepository;
+    private MockInterface $userRepository;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->userRepository = $this->createMock(UserRepository::class);
+        $this->userRepository = Mockery::mock(UserRepository::class);
         $this->loginService = new LoginService($this->userRepository);
     }
 
@@ -43,35 +46,24 @@ class LoginServiceTest extends TestCase
         ];
 
         $this->userRepository
-            ->expects($this->once())
-            ->method('findByEmail')
+            ->shouldReceive('findByEmail')
+            ->once()
             ->with('test@example.com')
-            ->willReturn($user);
+            ->andReturn($user);
 
-        // Mock Hash::check
         Mockery::mock('alias:Illuminate\Support\Facades\Hash')
             ->shouldReceive('check')
             ->once()
             ->with('password123', 'hashedpassword')
             ->andReturn(true);
 
-        // Mock request() helper
-        $requestMock = Mockery::mock();
-        $requestMock->shouldReceive('ip')->andReturn('127.0.0.1');
-        $requestMock->shouldReceive('userAgent')->andReturn('TestAgent/1.0');
-        
-        // Mock the global request function
-        $this->app = app(); // Get the Laravel app instance
-        $this->app->instance('request', $requestMock);
-
-        // Mock AuditLogService::record
         Mockery::mock('alias:App\Services\AuditLog\AuditLogService')
             ->shouldReceive('record')
             ->once()
             ->with($user, 'user_login', null, null, ['ip_address' => '127.0.0.1', 'user_agent' => 'TestAgent/1.0']);
 
         // Act
-        $result = $this->loginService->login($credentials);
+        $result = $this->loginService->login($credentials, '127.0.0.1', 'TestAgent/1.0');
 
         // Assert
         $this->assertTrue($result['status']);
@@ -89,10 +81,10 @@ class LoginServiceTest extends TestCase
         ];
 
         $this->userRepository
-            ->expects($this->once())
-            ->method('findByEmail')
+            ->shouldReceive('findByEmail')
+            ->once()
             ->with('nonexistent@example.com')
-            ->willReturn(null);
+            ->andReturn(null);
 
         // Act
         $result = $this->loginService->login($credentials);
@@ -116,12 +108,11 @@ class LoginServiceTest extends TestCase
         ];
 
         $this->userRepository
-            ->expects($this->once())
-            ->method('findByEmail')
+            ->shouldReceive('findByEmail')
+            ->once()
             ->with('test@example.com')
-            ->willReturn($user);
+            ->andReturn($user);
 
-        // Mock Hash::check to return false
         Mockery::mock('alias:Illuminate\Support\Facades\Hash')
             ->shouldReceive('check')
             ->once()

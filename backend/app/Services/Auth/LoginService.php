@@ -13,7 +13,7 @@ readonly class LoginService
     {
     }
 
-    public function login(array $credentials): array
+    public function login(array $credentials, string $ipAddress = '', string $userAgent = ''): array
     {
         $user = $this->userRepository->findByEmail($credentials['email']);
 
@@ -34,7 +34,7 @@ readonly class LoginService
             'user_login',
             null,
             null,
-            ['ip_address' => request()->ip(), 'user_agent' => request()->userAgent()]
+            ['ip_address' => $ipAddress, 'user_agent' => $userAgent]
         );
 
         return ResponseBuilder::getInstance()
