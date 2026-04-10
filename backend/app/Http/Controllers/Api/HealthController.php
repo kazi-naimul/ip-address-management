@@ -10,7 +10,7 @@ class HealthController extends Controller
     {
         return response()->json([
             'status' => 'healthy',
-            'message' => 'Boilerplate API is ready.'
+            'message' => 'API is ready.'
         ]);
     }
 }

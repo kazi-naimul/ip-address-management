@@ -1,4 +1,4 @@
-FROM php:8.2-apache
+FROM php:8.2-fpm
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -9,14 +9,22 @@ RUN apt-get update \
         libonig-dev \
         libxml2-dev \
         unzip \
+        curl \
+        git \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" \
         pdo_mysql \
         mbstring \
         zip \
         gd \
-    && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Copy startup helper
+COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 WORKDIR /var/www/html
 COPY . /var/www/html
@@ -24,6 +32,6 @@ COPY . /var/www/html
 RUN touch /var/www/html/api_log.txt /var/www/html/cron_log.txt \
     && chown -R www-data:www-data /var/www/html
 
-EXPOSE 80
+EXPOSE 9000
 
-CMD ["apache2-foreground"]
+CMD ["/usr/local/bin/docker-entrypoint.sh"]
